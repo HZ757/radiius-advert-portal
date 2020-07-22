@@ -1,0 +1,114 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+	
+  
+    // This rule allows anyone on the internet to view, edit, and delete
+    // all data in your Firestore database. It is useful for getting
+    // started, but it is configured to expire after 30 days because it
+    // leaves your app open to attackers. At that time, all client
+    // requests to your Firestore database will be denied.
+    //
+    // Make sure to write security rules for your app before that time, or else
+    // your app will lose access to your Firestore database
+    match /{document=**} {
+      allow read, write: if request.time < timestamp.date(2020, 7, 17);
+    }
+    
+    match /consumers/{documentID}{
+    // Check if logged in user owns the document
+    allow update, delete: if request.auth.uid == resource.data.id;
+    // Check if user owns the document that is trying to be written
+    allow create: if request.auth.uid==request.resource.data.id;
+    // Check if user is a logged in user
+    allow read: if request.auth != null;
+    
+    match /badges/{badgeDocumentID}{
+    		allow update,delete: if loggedInUserIsOwner(); 
+        allow create: if loggedInUserIsOwnerOnCreate();
+        allow read: if loggedInUserIsOwner() || accountIsPublic() || loggedInUserIsFollower();
+    }
+    
+    match /tags/{tagsDocumentID}{
+    		allow update,delete: if loggedInUserIsOwner(); 
+        allow create: if loggedInUserIsOwnerOnCreate();
+        allow read: if accountIsPublic() ||  loggedInUserIsOwner() || loggedInUserIsFollower();
+    }
+    
+    match /followers/{followerDocumentID}{
+    	// update or delete can take place by owner or if logged in user is not a follower
+    	allow update,delete: if loggedInUserIsOwner() || !loggedInUserIsFollower() 
+      && request.resource.data.newFollowerId == request.auth.uid;
+      allow create: if loggedInUserIsOwnerOnCreate() || !loggedInUserIsFollower() 
+      && request.resource.data.newFollowerId == request.auth.uid;
+      allow read: if accountIsPublic() || loggedInUserIsOwner() ||  loggedInUserIsFollower();
+    }
+    
+
+    
+    match /posts/{postDocumentID}{
+    	allow create: if loggedInUserIsOwnerOnCreate();
+      // REMOVE LAST CONDITION AND REPLACE WITH CLOUD FUNCTION
+      allow update, delete: if loggedInUserIsOwner() || loggedInUserIsFollower() && request.resource.data.fvrts != null; 
+    	allow read: if loggedInUserIsOwner() || loggedInUserIsFollower(); 
+    }
+      function loggedInUserIsOwner(){
+        return request.auth.uid == resource.data.owner;
+      }
+      function loggedInUserIsOwnerOnCreate(){
+        return request.auth.uid == request.resource.data.owner;
+      }
+
+      function loggedInUserIsFollower(){
+       return exists(/databses/$(database)/documents/consumers/$(documentID)/followEvents/$(request.auth.uid));
+      }
+      function accountIsPublic(){
+        return get(/databses/$(database)/documents/consumers/$(documentID)).data.type =='public';
+      }
+
+    }
+    
+    match /businesses/{documentID}{
+    	allow read: if request.auth != null; 
+      allow write: if request.auth.uid == resource.data.id;
+      
+    		match /products/{productDocumentID}{
+        		allow read: if request.auth != null;
+            allow update, delete: if loggedInUserIsOwner();
+            allow create: if loggedInUserIsOwnerOnCreate();
+        }
+        
+        match /promotions/{promotionDocumentID}{
+        		allow read: if request.auth != null;
+            allow update, delete: if loggedInUserIsOwner();
+            allow create: if loggedInUserIsOwnerOnCreate();
+        }
+        
+        match /rewards/{rewardsDocumentID}{
+        		allow read: if request.auth != null;
+            allow update, delete: if loggedInUserIsOwner();
+            allow create: if loggedInUserIsOwnerOnCreate();
+        }
+        
+      function loggedInUserIsOwner(){
+        return request.auth.uid == resource.data.owner;
+      }
+       function loggedInUserIsOwnerOnCreate(){
+        return request.auth.uid == request.resource.data.owner;
+      }
+    }
+    match /followRequests/{followRequestDocumentID}{
+    	//request.auth.token.firebase.sign_in_provider
+      allow create: if notFollowers() && request.auth.token.firebase.sign_in_provider !='anonymous';
+      allow update,delete: if resource.data.sentBy == request.auth.uid || resource.data.sentTo == request.auth.uid;
+    	allow read: if resource.data.sentTo == request.auth.uid || resource.data.sentBy == request.auth.uid;
+    }
+    
+    function notFollowers(){
+       return !exists(/databses/$(database)/documents/consumers/$(request.resource.data.sentTo)/followEvents/$(request.auth.uid)) &&
+       !exists(/databses/$(database)/documents/consumers/$(request.auth.uid)/followEvents/$(request.resource.data.sentTo));
+      }
+    
+  }
+  
+}
