@@ -16,11 +16,11 @@
               </select>
             </form>
           </div>
-          <div v-for='billboard in billboards' :key='billboard' style="height: 70px; display: flex; flex-direction: column; border: 1px solid lightgrey;">
+          <button v-for='billboard in billboards' :key='billboard' @click="innerClick(billboard)" style="height: 70px; display: flex; flex-direction: column; border: 1px solid lightgrey;">
             <h3 style="margin-bottom: 0px; margin-left: 5px;">{{ billboard.address }}</h3>
             <p style="margin-bottom: 0px; color: black; font-size: 12px; margin-left: 5px;">Current Bid: ${{ billboard.bid }}</p>
             <p style="margin-bottom: 0px; color: black; font-size: 12px; margin-left: 5px;">Closing Time: {{ billboard.closingTime }}</p>
-          </div>
+          </button>
         </div>
         <div class="BillboardMap">
           <l-map
@@ -60,6 +60,27 @@
                 </div>
               </l-tooltip>
             </l-marker>
+            <l-marker v-for='billboard in billboards' :key='billboard' :lat-lng=billboard.latLong>
+              <l-tooltip :options="{ permanent: true, interactive: true }">
+                <div @click="innerClick(billboard)">
+                  <p v-show="billboard.showPointer">Pointer</p>
+                  
+                  <div v-show="billboard.showParagraph">
+                  <p>
+                    {{ billboard.address }}
+                  </p>
+
+                  <p>
+                    Current Bid: {{ billboard.bid }}
+                  </p>
+
+                  <p>
+                    Closing Time: {{ billboard.closingTime }}
+                  </p>
+                  </div>
+                </div>
+              </l-tooltip>
+            </l-marker>
           </l-map>
         </div>
       </div>
@@ -86,48 +107,40 @@
         billboards: 
         [
           {
-            address: "University and Dundas",
+            address: "Nathan Phillips Square",
             bid: "600.00",
-            closingTime: "11:59pm"
+            closingTime: "11:59pm",
+            latLong: latLng(43.6532, -79.3832),
+            showParagraph: false,
+            showPointer: true
           },
           {
-            address: "University and Dundas",
+            address: "University of Toronto",
             bid: "600.00",
-            closingTime: "11:59pm"
+            closingTime: "11:59pm",
+            latLong: latLng(43.662767, -79.395560),
+            showParagraph: false,
+            showPointer: true
           },
           {
-            address: "University and Dundas",
+            address: "Yonge and Queen",
             bid: "600.00",
-            closingTime: "11:59pm"
+            closingTime: "11:59pm",
+            latLong: latLng(43.652439, -79.379246),
+            showParagraph: false,
+            showPointer: true
           },
           {
-            address: "University and Dundas",
+            address: "CN Tower",
             bid: "600.00",
-            closingTime: "11:59pm"
+            closingTime: "11:59pm",
+            latLong: latLng(43.641836, -79.386396),
+            showParagraph: false,
+            showPointer: true
           },
-          {
-            address: "University and Dundas",
-            bid: "600.00",
-            closingTime: "11:59pm"
-          },
-          {
-            address: "University and Dundas",
-            bid: "600.00",
-            closingTime: "11:59pm"
-          },
-          {
-            address: "University and Dundas",
-            bid: "600.00",
-            closingTime: "11:59pm"
-          },
-          {
-            address: "University and Dundas",
-            bid: "600.00",
-            closingTime: "11:59pm"
-          }
         ],
         zoom: 13,
-        center: latLng(47.41322, -1.219482),
+        center: latLng(43.6532, -79.3832),
         url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
         attribution:
           '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors',
@@ -167,8 +180,25 @@
       showLongText() {
         this.showParagraph = !this.showParagraph;
       },
-      innerClick() {
-        alert("Click!");
+      innerClick(billboard) {
+        //alert("Click!");
+        if (!billboard.showParagraph) {
+          for (var i = 0; i<this.billboards.length; i++)
+          {
+            this.billboards[i].showParagraph = false;
+            this.billboards[i].showPointer = false;
+          }
+          billboard.showParagraph = true;
+        }
+        else{
+          billboard.showParagraph = false;
+          for (var i = 0; i<this.billboards.length; i++)
+          {
+            this.billboards[i].showPointer = true;
+            console.log("asdf");
+          }
+        }
+        
       }
     }
   }
